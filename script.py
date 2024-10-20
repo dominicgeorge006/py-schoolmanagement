@@ -246,10 +246,6 @@ def update_info_parent():
         email_entry.insert(0, current_info[6] if current_info else "")
         email_entry.pack()
 
-        ttk.Label(update_window, text="class:").pack(pady=5)
-        class_entry = ttk.Entry(update_window)
-        class_entry.insert(0, current_info[7] if current_info else "")
-        class_entry.pack()
 
         def submit_update():
             new_info = (
@@ -260,20 +256,16 @@ def update_info_parent():
             address_entry.get(),
             emergency_contact_entry.get(),
             email_entry.get(),
-            class_entry.get(),
+    
         )
             if current_info is None:
-                # Insert statement corrected
-                cur.execute(
-                    "INSERT INTO STUDENTS (first_name, last_name, dob, gender, address, emergency_contact, email, class, admno) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);",
-                    new_info + (admno,)
-                )
-                con.commit()
+                messagebox.showinfo("Failed", "Please Ask Admin to Register Student!")
+                        
             else:
                 # Update statement corrected
                 cur.execute("""
                     UPDATE students 
-                    SET first_name=%s, last_name=%s, dob=%s, gender=%s, address=%s, emergency_contact=%s, email=%s, class=%s
+                    SET first_name=%s, last_name=%s, dob=%s, gender=%s, address=%s, emergency_contact=%s, email=%s
                     WHERE admno=%s
                 """, new_info + (admno,))
                 con.commit()
@@ -338,14 +330,17 @@ def update_info_teacher():
                 email_entry.get(),
                 staff_id
             )
-            cur.execute("""
-                UPDATE staff 
-                SET NAME=%s, DOB=%s, GENDER=%s, ADDRESS=%s, EMERGENCY_CONTACT=%s, EMAIL=%s 
-                WHERE STAFFID=%s
-            """, new_info)
-            con.commit()
-            messagebox.showinfo("Success", "Information updated successfully!")
-            update_window.destroy()
+            if current_info is None:
+                messagebox.show("Error","Kindly Ask Admin to Register Teacher")
+            else:
+                cur.execute("""
+                    UPDATE staff 
+                    SET NAME=%s, DOB=%s, GENDER=%s, ADDRESS=%s, EMERGENCY_CONTACT=%s, EMAIL=%s 
+                    WHERE STAFFID=%s
+                """, new_info)
+                con.commit()
+                messagebox.showinfo("Success", "Information updated successfully!")
+                update_window.destroy()
 
         ttk.Button(update_window, text="Update", command=submit_update).pack(pady=20)
 
@@ -356,30 +351,36 @@ def mark_attendance():
     cur.execute(f"SELECT class1, class2, class3 FROM staff WHERE staffid='{username_text}'")
     classes = cur.fetchone()
 
-    # Get all students in the classes
-    students = []
+    # Dictionary to hold students grouped by class
+    students_by_class = {}
     for class_name in classes:
         cur.execute(f"SELECT admno, first_name FROM students WHERE class='{class_name}'")
-        students.extend(cur.fetchall())
-    
+        students_by_class[class_name] = cur.fetchall()
+
     # Create a new window for marking attendance
     attendance_window = tk.Toplevel()
     attendance_window.title("Mark Attendance")
-    attendance_window.geometry("400x400")
+    attendance_window.geometry("400x600")
 
     ttk.Label(attendance_window, text="Mark Attendance", font=("Segoe UI", 20, "bold")).pack(pady=10)
 
     # Calendar widget for date selection
     ttk.Label(attendance_window, text="Select Date:").pack(pady=5)
-    cal = Calendar(attendance_window, selectmode='day', year=datetime.now().year, month=datetime.now().month, day=datetime.now().day)
+    cal = Calendar(attendance_window, selectmode='day', year=datetime.now().year, 
+                   month=datetime.now().month, day=datetime.now().day)
     cal.pack(pady=10)
 
     attendance_vars = {}
-    for admno, name in students:
-        var = tk.StringVar(value='P')  # Default to Present
-        attendance_vars[admno] = var
-        ttk.Label(attendance_window, text=f"{name} ({admno})").pack(anchor='w')
-        ttk.Combobox(attendance_window, textvariable=var, values=['P', 'A', 'L'], state='readonly').pack(anchor='w')
+    # Display students grouped by class
+    for class_name, students in students_by_class.items():
+        # Label for each class
+        ttk.Label(attendance_window, text=f"Class: {class_name}", font=("Segoe UI", 14, "bold")).pack(pady=5)
+
+        for admno, name in students:
+            var = tk.StringVar(value='P')  # Default to Present
+            attendance_vars[admno] = var
+            ttk.Label(attendance_window, text=f"{name} ({admno})").pack(anchor='w')
+            ttk.Combobox(attendance_window, textvariable=var, values=['P', 'A', 'L'], state='readonly').pack(anchor='w')
 
     def submit_attendance():
         attendance_date = cal.get_date()  # Get the selected date from the calendar
@@ -396,6 +397,7 @@ def mark_attendance():
         attendance_window.destroy()
 
     ttk.Button(attendance_window, text="Submit", command=submit_attendance).pack(pady=20)
+
 
 def view_attendance_parent():
     # Create a new window for viewing attendance
@@ -492,14 +494,14 @@ def add_user(treeview):
         if nusername and nrole and npassword:  # Ensure all fields are filled
             cur.execute("INSERT INTO credentials (name,username, role, password) VALUES (%s, %s, %s,%s)", (nname,nusername, nrole, npassword))
             con.commit()
-            load_users(treeview)  # Refresh the treeview
-            add_window.destroy()  # Close the add user window
             if nrole=='PARENT':
                 cur.execute(f"INSERT INTO students (admno) value('{nusername}');")
                 con.commit()
             else:
                 cur.execute(f"INSERT INTO staff (staffid) value('{nusername}');")
                 con.commit()
+            load_users(treeview)  # Refresh the treeview
+            add_window.destroy()  # Close the add user window
     add_window = tk.Toplevel(useredit_window)
     add_window.title("Add User")
 
@@ -528,24 +530,25 @@ def delete_user(treeview):
         return
     
     user_id = selected_item[0]
-    cur.execute("SELECT username FROM credentials WHERE name = %s;", (user_id,))
-    uname = cur.fetchone()
+    cur.execute(f"SELECT ROLE FROM credentials WHERE name = %s;", (user_id,))
+    role = cur.fetchone()
+    cur.execute(f"SELECT USERNAME FROM CREDENTIALS WHERE name='{user_id}'")
+    uname=cur.fetchone()
+    if role and role[0] == 'PARENT':
+            cur.execute(f"DELETE FROM students WHERE admno = '{uname[0]}';")
+            con.commit()
+    else:
+            cur.execute(f"DELETE FROM staff WHERE staffid = '{uname[0]}';")
+            con.commit()
+
     
+        
     if uname:
         cur.execute(f"DELETE FROM credentials WHERE username = '{uname[0]}';")
         con.commit()
-
-        # Use parameterized query to avoid SQL injection and syntax issues
-        cur.execute("SELECT role FROM credentials WHERE username = %s;", (uname[0],))
-        role = cur.fetchone()
-
-        if role and role[0] == 'PARENT':
-            cur.execute(f"DELETE FROM students WHERE admno = 'uname[0]';")
-        else:
-            cur.execute(f"DELETE FROM staff WHERE staffid = 'uname[0]';")
-
-        con.commit()
         load_users(treeview)  # Refresh the treeview
+
+        
     else:
         messagebox.showwarning("Error", "User not found.")
 def modify_user(treeview):
@@ -603,6 +606,180 @@ def modify_user(treeview):
 
     ttk.Button(modify_window, text="Submit", command=submit).pack()
 
+def register_student():
+    def submit_student():
+        admno = entry_admno.get()
+        first_name = entry_first_name.get()
+        last_name = entry_last_name.get()
+        dob = entry_dob.get()
+        gender = var_gender.get()
+        address = entry_address.get()
+        emergency_contact = entry_emergency_contact.get()
+        subjects = [entry_subject1.get(), entry_subject2.get(), entry_subject3.get(),
+                    entry_subject4.get(), entry_subject5.get()]
+        student_class = entry_class.get()
+        email = entry_email.get()
+
+       
+        sql = f"""UPDATE students
+                SET first_name='{first_name}', last_name='{last_name}', dob='{dob}', 
+                    gender='{gender}', address='{address}', emergency_contact='{emergency_contact}', 
+                    subject1='{subjects[0]}', subject2='{subjects[1]}', subject3='{subjects[2]}', 
+                    subject4='{subjects[3]}', subject5='{subjects[4]}', 
+                    class='{student_class}', email='{email}'
+                WHERE admno='{admno}'"""
+        cur.execute(sql)
+        con.commit()
+        messagebox.showinfo("Success", "Student Registered Successfully !")
+        student_window.destroy()
+    
+    student_window = tk.Toplevel(dashboard_window)
+    student_window.title("Student Registration")
+
+    ttk.Label(student_window, text="Student Registration").grid(row=0, columnspan=2)
+
+    ttk.Label(student_window, text="Admission No:").grid(row=1, column=0)
+    entry_admno = ttk.Entry(student_window)
+    entry_admno.grid(row=1, column=1)
+
+    ttk.Label(student_window, text="First Name:").grid(row=2, column=0)
+    entry_first_name = ttk.Entry(student_window)
+    entry_first_name.grid(row=2, column=1)
+
+    ttk.Label(student_window, text="Last Name:").grid(row=3, column=0)
+    entry_last_name = ttk.Entry(student_window)
+    entry_last_name.grid(row=3, column=1)
+
+    ttk.Label(student_window, text="DOB (YYYY-MM-DD):").grid(row=4, column=0)
+    entry_dob = ttk.Entry(student_window)
+    entry_dob.grid(row=4, column=1)
+
+    var_gender = tk.StringVar(value='M')
+    ttk.Label(student_window, text="Gender:").grid(row=5, column=0)
+    ttk.Radiobutton(student_window, text='M', variable=var_gender, value='M').grid(row=5, column=1, sticky='w')
+    ttk.Radiobutton(student_window, text='F', variable=var_gender, value='F').grid(row=5, column=1)
+
+    ttk.Label(student_window, text="Address:").grid(row=6, column=0)
+    entry_address = ttk.Entry(student_window)
+    entry_address.grid(row=6, column=1)
+
+    ttk.Label(student_window, text="Emergency Contact:").grid(row=7, column=0)
+    entry_emergency_contact = ttk.Entry(student_window)
+    entry_emergency_contact.grid(row=7, column=1)
+
+    ttk.Label(student_window, text="Subjects (5):").grid(row=8, column=0)
+    entry_subject1 = ttk.Entry(student_window)
+    entry_subject1.grid(row=8, column=1)
+
+    entry_subject2 = ttk.Entry(student_window)
+    entry_subject2.grid(row=9, column=1)
+
+    entry_subject3 = ttk.Entry(student_window)
+    entry_subject3.grid(row=10, column=1)
+
+    entry_subject4 = ttk.Entry(student_window)
+    entry_subject4.grid(row=11, column=1)
+
+    entry_subject5 = ttk.Entry(student_window)
+    entry_subject5.grid(row=12, column=1)
+
+    ttk.Label(student_window, text="Class:").grid(row=13, column=0)
+    entry_class = ttk.Entry(student_window)
+    entry_class.grid(row=13, column=1)
+
+    ttk.Label(student_window, text="Email:").grid(row=14, column=0)
+    entry_email = ttk.Entry(student_window)
+    entry_email.grid(row=14, column=1)
+
+    ttk.Button(student_window, text="Submit", command=submit_student).grid(row=15, columnspan=2)
+def register_teacher():
+    def submit_teacher():
+        staff_id = entry_staff_id.get()
+        name = entry_name.get()
+        subject_taught = entry_subject_taught.get()
+        classes = [entry_class1.get(), entry_class2.get(), entry_class3.get()]
+        email = entry_email.get()
+        spouse_name = entry_spouse_name.get()
+        gender = var_gender.get()
+        emergency_contact = entry_emergency_contact.get()
+        address = entry_address.get()
+        dob = entry_dob.get()
+        date_of_joining = entry_date_of_joining.get()
+
+        # SQL query using f-string to update the STAFF table
+        sql = f"""UPDATE STAFF
+                  SET NAME='{name}', SUBJECT_TAUGHT='{subject_taught}', 
+                      CLASS1='{classes[0]}', CLASS2='{classes[1]}', CLASS3='{classes[2]}',
+                      EMAIL='{email}', SPOUSE_NAME='{spouse_name}', 
+                      GENDER='{gender}', EMERGENCY_CONTACT='{emergency_contact}', 
+                      ADDRESS='{address}', DOB='{dob}', DATE_OF_JOINING='{date_of_joining}'
+                  WHERE STAFFID='{staff_id}'"""
+        
+        cur.execute(sql)
+        con.commit()
+        messagebox.showinfo("Success", "Teacher Registered Successfully!")
+        teacher_window.destroy()
+
+    # Create a new window for teacher registration
+    teacher_window = tk.Toplevel(dashboard_window)
+    teacher_window.title("Teacher Registration")
+
+    ttk.Label(teacher_window, text="Teacher Registration").grid(row=0, columnspan=2)
+
+    ttk.Label(teacher_window, text="Staff ID:").grid(row=1, column=0)
+    entry_staff_id = ttk.Entry(teacher_window)
+    entry_staff_id.grid(row=1, column=1)
+
+    ttk.Label(teacher_window, text="Name:").grid(row=2, column=0)
+    entry_name = ttk.Entry(teacher_window)
+    entry_name.grid(row=2, column=1)
+
+    ttk.Label(teacher_window, text="Subject Taught:").grid(row=3, column=0)
+    entry_subject_taught = ttk.Entry(teacher_window)
+    entry_subject_taught.grid(row=3, column=1)
+
+    ttk.Label(teacher_window, text="Class 1:").grid(row=4, column=0)
+    entry_class1 = ttk.Entry(teacher_window)
+    entry_class1.grid(row=4, column=1)
+
+    ttk.Label(teacher_window, text="Class 2:").grid(row=5, column=0)
+    entry_class2 = ttk.Entry(teacher_window)
+    entry_class2.grid(row=5, column=1)
+
+    ttk.Label(teacher_window, text="Class 3:").grid(row=6, column=0)
+    entry_class3 = ttk.Entry(teacher_window)
+    entry_class3.grid(row=6, column=1)
+
+    ttk.Label(teacher_window, text="Email:").grid(row=7, column=0)
+    entry_email = ttk.Entry(teacher_window)
+    entry_email.grid(row=7, column=1)
+
+    ttk.Label(teacher_window, text="Spouse Name:").grid(row=8, column=0)
+    entry_spouse_name = ttk.Entry(teacher_window)
+    entry_spouse_name.grid(row=8, column=1)
+
+    var_gender = tk.StringVar(value='M')
+    ttk.Label(teacher_window, text="Gender:").grid(row=9, column=0)
+    ttk.Radiobutton(teacher_window, text='Male', variable=var_gender, value='M').grid(row=9, column=1, sticky='w')
+    ttk.Radiobutton(teacher_window, text='Female', variable=var_gender, value='F').grid(row=9, column=1)
+
+    ttk.Label(teacher_window, text="Emergency Contact:").grid(row=10, column=0)
+    entry_emergency_contact = ttk.Entry(teacher_window)
+    entry_emergency_contact.grid(row=10, column=1)
+
+    ttk.Label(teacher_window, text="Address:").grid(row=11, column=0)
+    entry_address = ttk.Entry(teacher_window)
+    entry_address.grid(row=11, column=1)
+
+    ttk.Label(teacher_window, text="DOB (YYYY-MM-DD):").grid(row=12, column=0)
+    entry_dob = ttk.Entry(teacher_window)
+    entry_dob.grid(row=12, column=1)
+
+    ttk.Label(teacher_window, text="Date of Joining (YYYY-MM-DD):").grid(row=13, column=0)
+    entry_date_of_joining = ttk.Entry(teacher_window)
+    entry_date_of_joining.grid(row=13, column=1)
+
+    ttk.Button(teacher_window, text="Submit", command=submit_teacher).grid(row=14, columnspan=2)
 
 
 
@@ -647,6 +824,8 @@ def open_dashboard(role):
     elif role == 'ADMIN':
         ttk.Label(dashboard_window, text="Admin Dashboard", font=("Segoe UI", 16, "bold")).pack(pady=10)
         ttk.Button(dashboard_window, text="Manage Users", command=manage_users).pack(pady=10)
+        ttk.Button(dashboard_window, text="Student Registration", command=register_student).pack(pady=10)
+        ttk.Button(dashboard_window, text="Teacher Registration", command=register_teacher).pack(pady=10)
         ttk.Button(dashboard_window, text="Logout", command=log_out ,style='Accent.TButton').pack(pady=10)
 
 
