@@ -4,6 +4,10 @@ from tkinter import messagebox
 from tkinter import PhotoImage
 from tkinter import filedialog
 import smtplib
+import base64
+from PIL import Image, ImageTk
+from PIL import ImageDraw
+import io
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -19,15 +23,15 @@ cur=con.cursor()
 def log_out():
     global root, dashboard_window
     
-    # Destroy the current dashboard window if it exists
+
     if dashboard_window:
         dashboard_window.destroy()
     
-    # Recreate the root window
+
     root = tk.Tk()
     root.geometry('925x500+300+200')
 
-    # Import the tcl file
+
     root.tk.call('source', 'forest-dark.tcl')
 
     # Set the theme with the theme_use method
@@ -60,7 +64,7 @@ def log_out():
     button.pack(pady=10)
     root.mainloop()
     
-
+file_name=[]
 def openFile():
         global file_name
         file_name=[]
@@ -85,7 +89,7 @@ def email_student():
     smt_port = 587
     smtp_server = 'smtp.gmail.com'
     email_from = 'veerhk2007@gmail.com'
-    pswd = 'wfxr yqdy iopp elpz'  # Consider storing this securely, e.g., environment variable
+    pswd = 'wfxr yqdy iopp elpz' 
     
     # Create the email window
     email_window = tk.Tk()
@@ -97,7 +101,9 @@ def email_student():
     ttk.Style().theme_use('forest-dark')
     
     # Subject
-    subj = f'New Announcement from {username_text}'
+    cur.execute(f"SELECT NAME FROM STAFF WHERE STAFFID='{username_text}';")
+    name=cur.fetchone()[0]
+    subj = f'New Announcement from {name}'
     
     # Body input
     inpembody = ttk.Label(email_window, text="Body:", anchor=tk.CENTER, font=("Segoe UI", 13, "bold"))
@@ -169,9 +175,7 @@ def email_student():
             msg['To'] = person
             msg['Subject'] = subj
             msg.attach(MIMEText(styl, 'html'))
-
-            # Attach file if selected
-            if file_name:
+            if file_name!=[]:
                 for i in file_name:
                     try:
                         file_base_name = os.path.basename(i)
@@ -183,12 +187,13 @@ def email_student():
                             msg.attach(p)
                     except Exception as e:
                         messagebox.showerror("Error", f"Failed to attach file: {file_base_name}\n{str(e)}")
-
+        
             try:
                 with smtplib.SMTP(smtp_server, smt_port) as email_server:
                     email_server.starttls()
                     email_server.login(email_from, pswd)
                     email_server.sendmail(email_from, person, msg.as_string())
+                    print(msg)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to send email to {person}\n{str(e)}")
 
@@ -347,24 +352,22 @@ def update_info_teacher():
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 def mark_attendance():
-    # Fetch classes for the logged-in teacher
     cur.execute(f"SELECT class1, class2, class3 FROM staff WHERE staffid='{username_text}'")
     classes = cur.fetchone()
 
-    # Dictionary to hold students grouped by class
     students_by_class = {}
     for class_name in classes:
         cur.execute(f"SELECT admno, first_name FROM students WHERE class='{class_name}'")
         students_by_class[class_name] = cur.fetchall()
 
-    # Create a new window for marking attendance
+    cur.execute(f"SELECT subject_taught from staff where staffid='{username_text}';")
+    subj=cur.fetchone()[0]
     attendance_window = tk.Toplevel()
     attendance_window.title("Mark Attendance")
-    attendance_window.geometry("400x600")
+    attendance_window.geometry("900x1000")
 
     ttk.Label(attendance_window, text="Mark Attendance", font=("Segoe UI", 20, "bold")).pack(pady=10)
 
-    # Calendar widget for date selection
     ttk.Label(attendance_window, text="Select Date:").pack(pady=5)
     cal = Calendar(attendance_window, selectmode='day', year=datetime.now().year, 
                    month=datetime.now().month, day=datetime.now().day)
@@ -390,8 +393,8 @@ def mark_attendance():
 
         for admno, status_var in attendance_vars.items():
             status_value = status_var.get()  # Get the actual string value from the StringVar
-            cur.execute("INSERT INTO std_attendance (admno, adate, status) VALUES (%s, %s, %s)", 
-                        (admno, formatted_date, status_value))
+            cur.execute("INSERT INTO std_attendance (admno, adate, status,subject) VALUES (%s, %s, %s,%s)", 
+                        (admno, formatted_date, status_value,subj))
         con.commit()
         messagebox.showinfo("Success", "Attendance marked successfully!")
         attendance_window.destroy()
@@ -400,39 +403,45 @@ def mark_attendance():
 
 
 def view_attendance_parent():
-    # Create a new window for viewing attendance
+    
     attendance_window = tk.Toplevel()
     attendance_window.title("View Attendance")
     attendance_window.geometry("600x400")
 
     ttk.Label(attendance_window, text="Attendance Records", font=("Segoe UI", 16)).pack(pady=10)
 
-    # Use the current logged-in username as the admno
+    
     admno = username_text
 
-    # Fetch attendance records for this admno
-    cur.execute(f"SELECT adate, status FROM std_attendance WHERE admno='{admno}'")
+    
+    cur.execute(f"SELECT adate, status , subject FROM std_attendance WHERE admno='{admno}'")
     attendance_data = cur.fetchall()
 
-    # Calculate attendance percentage
+   
     total_classes = len(attendance_data)
-    attended_classes = sum(1 for _, status in attendance_data if status == 'P')
-    attendance_percentage = (attended_classes / total_classes * 100) if total_classes > 0 else 0
+    attended_classes = 0
+    for i in attendance_data:
+        if i[1]=='P' or i[1]=='L':
+            attended_classes+=1
+    if total_classes:
+        attendance_percentage = (attended_classes / total_classes * 100) 
+    else:
+        attendance_percentage=0
 
-    # Display attendance records
-    columns = ("Date", "Status")
+    
+    columns = ("Date", "Status","Subject")
     treeview = ttk.Treeview(attendance_window, columns=columns, show='headings')
     for col in columns:
         treeview.heading(col, text=col)
     treeview.pack(expand=True, fill="both", padx=10, pady=10)
 
-    for date, status in attendance_data:
-        treeview.insert("", "end", values=(date, status))
+    for date, status,subj in attendance_data:
+        treeview.insert("", "end", values=(date, status, subj))
 
-    # Show attendance percentage
+    
     ttk.Label(attendance_window, text=f"Attendance Percentage: {attendance_percentage:.2f}%", font=("Segoe UI", 14)).pack(pady=10)
 
-    # Close button
+    
     close_button = ttk.Button(attendance_window, text="Close", command=attendance_window.destroy)
     close_button.pack(pady=10)
 
@@ -635,6 +644,7 @@ def register_student():
     
     student_window = tk.Toplevel(dashboard_window)
     student_window.title("Student Registration")
+    student_window.geometry('700x500')
 
     ttk.Label(student_window, text="Student Registration").grid(row=0, columnspan=2)
 
@@ -723,6 +733,7 @@ def register_teacher():
     # Create a new window for teacher registration
     teacher_window = tk.Toplevel(dashboard_window)
     teacher_window.title("Teacher Registration")
+    teacher_window.geometry('700x500')
 
     ttk.Label(teacher_window, text="Teacher Registration").grid(row=0, columnspan=2)
 
@@ -782,6 +793,35 @@ def register_teacher():
     ttk.Button(teacher_window, text="Submit", command=submit_teacher).grid(row=14, columnspan=2)
 
 
+def update_photo():
+    cur.execute(f"SELECT ID,PICTURE FROM PROFILE WHERE id='{username_text}';")
+    picstat=cur.fetchall()
+    global img_name
+    if picstat:
+        img_name=[]
+        temp=filedialog.askopenfilenames()
+        for i in temp:
+            img_name.append(i.replace("\\" , "\\\\"))
+        imgfile = open(img_name[0], 'rb').read()
+        imgfile = base64.b64encode(imgfile).decode('utf-8')
+        args = (username_text, imgfile)
+        q=f"UPDATE PROFILE SET picture='{imgfile}' where id='{username_text}';"
+        cur.execute(q)
+        con.commit()
+        messagebox.showinfo("Success","Image Successfully saved ! Please login again to view Changes.")
+    else:
+        img_name=[]
+        temp=filedialog.askopenfilenames()
+        for i in temp:
+            img_name.append(i.replace("\\" , "\\\\"))
+        imgfile = open(img_name[0], 'rb').read()
+        imgfile = base64.b64encode(imgfile).decode('utf-8')
+        args = (username_text, imgfile)
+        cur.execute('INSERT INTO PROFILE values(%s,%s);',args)
+        con.commit()
+        messagebox.showinfo("Success","Image Successfully saved ! Please login again to view Changes.")
+
+
 
 
 
@@ -795,7 +835,7 @@ def open_dashboard(role):
     root.destroy()  # Close the login window
     global dashboard_window
     dashboard_window = tk.Tk()
-    dashboard_window.geometry('400x400')
+    dashboard_window.geometry('700x500')
     dashboard_window.title(f"{role.capitalize()} Dashboard")
     # Import the tcl file
     dashboard_window.tk.call('source', 'forest-dark.tcl')
@@ -806,12 +846,41 @@ def open_dashboard(role):
     # Common header
     header = ttk.Label(dashboard_window, text=f"Welcome, {creds[0]}!", font=("Segoe UI", 20, "bold"))
     header.pack(pady=10)
+    cur.execute(f'SELECT PICTURE FROM PROFILE WHERE ID="{username_text}";')
+    pic = cur.fetchall()
+
+    if not pic:
+        cur.execute("SELECT PICTURE FROM PROFILE WHERE ID='blank.jpg';")
+        pic=cur.fetchall()
+    image = pic[0][0]
+
+    binary_data = base64.b64decode(image)
+    image = Image.open(io.BytesIO(binary_data))
+    image = image.resize((100, 100), Image.LANCZOS)
+
+    # Create a circular mask
+    mask = Image.new('L', (100, 100), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((0, 0, 100, 100), fill=255)
+
+    # Apply the mask to the image
+    image.putalpha(mask)
+
+    # Convert the image to PhotoImage format
+    photo = ImageTk.PhotoImage(image)
+
+    # Create a Label to display the image
+    label = tk.Label(dashboard_window, image=photo)
+    label.image = photo  # Keep a reference to avoid garbage collection
+    label.place(x=10, y=10)  # Place the image at (10, 10) on the window
+
     
     if role == 'PARENT':
         # Widgets specific to Parent role
         ttk.Label(dashboard_window, text="Parent Dashboard", font=("Segoe UI", 16, "bold")).pack(pady=10)
         ttk.Button(dashboard_window, text="View Attendance", command=view_attendance_parent).pack(pady=10)
         ttk.Button(dashboard_window, text="Update Contact Information", command=update_info_parent).pack(pady=10)
+        ttk.Button(dashboard_window, text="Update Photo", command=update_photo).pack(pady=10)
         ttk.Button(dashboard_window, text="Logout", command=log_out ,style='Accent.TButton').pack(pady=10)
         
     elif role == 'TEACHER':
@@ -819,6 +888,7 @@ def open_dashboard(role):
         ttk.Button(dashboard_window, text="Email Students", command=email_student).pack(pady=10)
         ttk.Button(dashboard_window, text="Mark Attendance", command=mark_attendance).pack(pady=10)
         ttk.Button(dashboard_window, text="Update Contact Information", command=update_info_teacher).pack(pady=10)
+        ttk.Button(dashboard_window, text="Update Photo", command=update_photo).pack(pady=10)
         ttk.Button(dashboard_window, text="Logout", command=log_out ,style='Accent.TButton').pack(pady=10)
         
     elif role == 'ADMIN':
