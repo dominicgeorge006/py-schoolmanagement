@@ -821,7 +821,69 @@ def update_photo():
         con.commit()
         messagebox.showinfo("Success","Image Successfully saved ! Please login again to view Changes.")
 
+def search_records():
+    query_type = search_type.get()
+    input_value = search_entry.get()
+    if query_type == "student_adm_no":
+            query = "SELECT admno,first_name,last_name,dob,address, emergency_contact, class FROM students WHERE admno = %s"
+            cur.execute(query, (input_value,))
+            records = cur.fetchall()
+            display_data(records, ['admno', 'first_name', 'last_name', 'dob', 'address', 'emergency_contact', 'class'])
+        
+    elif query_type == "student_class":
+            query = "SELECT admno,first_name,last_name,dob,address,emergency_contact,class FROM students WHERE class LIKE %s"
+            cur.execute(query, (input_value + "%",))
+            records = cur.fetchall()
+            display_data(records, ['admno', 'first_name', 'last_name', 'dob', 'address', 'emergency_contact', 'class'])
+        
+    elif query_type == "staff_id":
+            query = "SELECT staffid,name,subject_taught,email,address FROM staff WHERE STAFFID = %s"
+            cur.execute(query, (input_value,))
+            records = cur.fetchall()
+            display_data(records, ['STAFFID', 'NAME', 'SUBJECT_TAUGHT', 'EMAIL', 'ADDRESS'])
+        
+    elif query_type == "staff_subject":
+            query = "SELECT staffid,name,subject_taught,email,address FROM staff WHERE SUBJECT_TAUGHT = %s"
+            cur.execute(query, (input_value,))
+            records = cur.fetchall()
+            display_data(records, ['STAFFID', 'NAME', 'SUBJECT_TAUGHT', 'EMAIL', 'ADDRESS'])
+        
+    
+def display_data(data, columns):
+        display_view.destroy()
+        data_viewer = tk.Toplevel()
+        data_viewer.title("Data Viewer")
+        data_viewer.geometry('1000x1000')
+        
+        tree = ttk.Treeview(data_viewer, columns=columns, show='headings')
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center")
 
+        for row in data:
+            tree.insert("", "end", values=row)
+
+        tree.pack(expand=True, fill='both')
+def show_data():
+    global search_entry, search_type,display_view
+    
+    display_view = tk.Toplevel()
+    display_view.title("Search Records")
+   
+
+    # Search Type Selection
+    search_type = tk.StringVar(value="student_adm_no")
+    ttk.Label(display_view, text="Select Search Type:").grid(row=0, column=0)
+    search_options = ["student_adm_no", "student_class", "staff_id", "staff_subject"]
+    ttk.OptionMenu(display_view, search_type, search_options[0], *search_options).grid(row=0, column=1)
+
+    # Search Entry
+    ttk.Label(display_view, text="Enter Value:").grid(row=1, column=0)
+    search_entry = ttk.Entry(display_view)
+    search_entry.grid(row=1, column=1)
+
+    # Search Button
+    ttk.Button(display_view, text="Search", command=search_records).grid(row=2, columnspan=2)
 
 
 
@@ -896,6 +958,7 @@ def open_dashboard(role):
         ttk.Button(dashboard_window, text="Manage Users", command=manage_users).pack(pady=10)
         ttk.Button(dashboard_window, text="Student Registration", command=register_student).pack(pady=10)
         ttk.Button(dashboard_window, text="Teacher Registration", command=register_teacher).pack(pady=10)
+        ttk.Button(dashboard_window, text="Search Records", command=show_data).pack(pady=10)
         ttk.Button(dashboard_window, text="Logout", command=log_out ,style='Accent.TButton').pack(pady=10)
 
 
