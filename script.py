@@ -22,19 +22,11 @@ cur=con.cursor()
 
 def log_out():
     global root, dashboard_window
-    
-
     if dashboard_window:
         dashboard_window.destroy()
-    
-
     root = tk.Tk()
     root.geometry('925x500+300+200')
-
-
     root.tk.call('source', 'forest-dark.tcl')
-
-
     ttk.Style().theme_use('forest-dark')
     
     img = PhotoImage(file='login.PNG')
@@ -89,13 +81,10 @@ def email_student():
     smtp_server = 'smtp.gmail.com'
     email_from = 'veerhk2007@gmail.com'
     pswd = '**** **** **** ****' 
-    
 
     email_window = tk.Tk()
     email_window.geometry('400x400')
     email_window.title("Send Email")
-    
-
     email_window.tk.call('source', 'forest-dark.tcl')
     ttk.Style().theme_use('forest-dark')
     
@@ -121,7 +110,6 @@ def email_student():
     selected_class['values'] = class_names
     selected_class.pack(pady=10)
 
-  
     attach = ttk.Button(email_window, text='Add Attachments', style='Accent.TButton', command=openFile)
     attach.pack()
 
@@ -129,12 +117,10 @@ def email_student():
         email_list = [] 
         selected = selected_class.get()
         
-      
         cur.execute(f"SELECT email FROM students WHERE class='{selected}'")
         emails = cur.fetchall()
         email_list.extend([email[0] for email in emails])  # Add emails to email_list
 
-        
         body_text = body.get()
         styl = f"""
 <html lang="en">
@@ -167,7 +153,6 @@ def email_student():
 </html>
 """
 
-
         for person in email_list:
             msg = MIMEMultipart()
             msg['From'] = email_from
@@ -199,7 +184,6 @@ def email_student():
         messagebox.showinfo("Success", "Emails Successfully Sent!")
         email_window.destroy()
 
-   
     send_button = ttk.Button(email_window, text='Send Email', style='Accent.TButton', command=send_emails)
     send_button.pack(pady=20)
 def update_info_parent():
@@ -209,12 +193,10 @@ def update_info_parent():
         update_window.title("Update Information")
         update_window.geometry("400x400")
 
-       
         admno = username_text 
         cur.execute("SELECT first_name, last_name, dob, gender, address, emergency_contact, email,class FROM students WHERE admno=%s", (admno,))
         current_info = cur.fetchone()
 
-        
         ttk.Label(update_window, text="First Name:").pack(pady=5)
         first_name_entry = ttk.Entry(update_window)
         first_name_entry.insert(0, current_info[0] if current_info else "")
@@ -250,7 +232,6 @@ def update_info_parent():
         email_entry.insert(0, current_info[6] if current_info else "")
         email_entry.pack()
 
-
         def submit_update():
             new_info = (
             first_name_entry.get(),
@@ -266,7 +247,6 @@ def update_info_parent():
                 messagebox.showinfo("Failed", "Please Ask Admin to Register Student!")
                         
             else:
-                
                 cur.execute("""
                     UPDATE students 
                     SET first_name=%s, last_name=%s, dob=%s, gender=%s, address=%s, emergency_contact=%s, email=%s
@@ -276,15 +256,13 @@ def update_info_parent():
             messagebox.showinfo("Success", "Information updated successfully!")
             update_window.destroy()
 
-
         ttk.Button(update_window, text="Update", command=submit_update).pack(pady=20)
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 
 def update_info_teacher():
-    try:
-       
+    try:    
         update_window = tk.Toplevel()
         update_window.title("Update Information")
         update_window.geometry("400x400")
@@ -293,7 +271,6 @@ def update_info_teacher():
         cur.execute("SELECT name, dob, gender, address, emergency_contact, email FROM staff WHERE STAFFID=%s", (staff_id,))
         current_info = cur.fetchone()
 
-        
         ttk.Label(update_window, text="Name:").pack(pady=5)
         name_entry = ttk.Entry(update_window)
         name_entry.insert(0, current_info[0] if current_info else "")
@@ -473,7 +450,6 @@ def manage_users():
 
     load_users(treeview)
 
-    
     add_button = ttk.Button(useredit_window, text="Add User", command=lambda: add_user(treeview))
     add_button.pack(pady=10)
 
