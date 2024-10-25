@@ -88,7 +88,7 @@ def email_student():
     smt_port = 587
     smtp_server = 'smtp.gmail.com'
     email_from = 'veerhk2007@gmail.com'
-    pswd = 'wfxr yqdy iopp elpz' 
+    pswd = '**** **** **** ****' 
     
 
     email_window = tk.Tk()
