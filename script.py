@@ -17,7 +17,7 @@ from datetime import datetime
 from tkinter import messagebox
 import mysql.connector
 from tkcalendar import Calendar  
-con=mysql.connector.connect(host='localhost',user='root',password='veerhk20',database='cscfyp')
+con=mysql.connector.connect(host='localhost',user='root',password='********',database='cscfyp')
 cur=con.cursor()
 
 def log_out():
