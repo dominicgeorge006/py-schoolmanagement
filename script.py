@@ -34,7 +34,7 @@ def log_out():
 
     root.tk.call('source', 'forest-dark.tcl')
 
-    # Set the theme with the theme_use method
+
     ttk.Style().theme_use('forest-dark')
     
     img = PhotoImage(file='login.PNG')
@@ -44,7 +44,6 @@ def log_out():
     frame = ttk.Frame(root, width=350, height=350)
     frame.place(x=625, y=60)
 
-    # Header
     header2 = ttk.Label(frame, text="Sign In", anchor=tk.CENTER, font=("Open Sans", 19, "bold"))
     header2.pack(pady=10)
 
@@ -91,51 +90,51 @@ def email_student():
     email_from = 'veerhk2007@gmail.com'
     pswd = 'wfxr yqdy iopp elpz' 
     
-    # Create the email window
+
     email_window = tk.Tk()
     email_window.geometry('400x400')
     email_window.title("Send Email")
     
-    # Set the theme
+
     email_window.tk.call('source', 'forest-dark.tcl')
     ttk.Style().theme_use('forest-dark')
     
-    # Subject
+
     cur.execute(f"SELECT NAME FROM STAFF WHERE STAFFID='{username_text}';")
     name=cur.fetchone()[0]
     subj = f'New Announcement from {name}'
     
-    # Body input
+
     inpembody = ttk.Label(email_window, text="Body:", anchor=tk.CENTER, font=("Segoe UI", 13, "bold"))
     body = ttk.Entry(email_window)
     inpembody.pack(pady=20)
     body.pack(pady=20)
 
-    # Class selection
+
     ttk.Label(email_window, text="Select Class:").pack(pady=5)
     selected_class = ttk.Combobox(email_window)
     
-    # Fetch and display classes for the teacher
+
     cur.execute(f"SELECT class1, class2, class3 FROM staff WHERE staffid='{username_text}'")
     classes = cur.fetchone()
-    class_names = [c for c in classes if c]  # Filter out None values
+    class_names = [c for c in classes if c]  
     selected_class['values'] = class_names
     selected_class.pack(pady=10)
 
-    # Attachments button
+  
     attach = ttk.Button(email_window, text='Add Attachments', style='Accent.TButton', command=openFile)
     attach.pack()
 
     def send_emails():
-        email_list = []  # Initialize email_list each time
+        email_list = [] 
         selected = selected_class.get()
         
-        # Get email addresses of students in the selected class
+      
         cur.execute(f"SELECT email FROM students WHERE class='{selected}'")
         emails = cur.fetchall()
         email_list.extend([email[0] for email in emails])  # Add emails to email_list
 
-        # Prepare the email body
+        
         body_text = body.get()
         styl = f"""
 <html lang="en">
@@ -205,17 +204,17 @@ def email_student():
     send_button.pack(pady=20)
 def update_info_parent():
     try:
-        # Create a new window for updating information
+      
         update_window = tk.Toplevel()
         update_window.title("Update Information")
         update_window.geometry("400x400")
 
-        # Fetch current information
-        admno = username_text  # Assuming the username is the admission number
+       
+        admno = username_text 
         cur.execute("SELECT first_name, last_name, dob, gender, address, emergency_contact, email,class FROM students WHERE admno=%s", (admno,))
         current_info = cur.fetchone()
 
-        # Create input fields for updating information
+        
         ttk.Label(update_window, text="First Name:").pack(pady=5)
         first_name_entry = ttk.Entry(update_window)
         first_name_entry.insert(0, current_info[0] if current_info else "")
@@ -267,7 +266,7 @@ def update_info_parent():
                 messagebox.showinfo("Failed", "Please Ask Admin to Register Student!")
                         
             else:
-                # Update statement corrected
+                
                 cur.execute("""
                     UPDATE students 
                     SET first_name=%s, last_name=%s, dob=%s, gender=%s, address=%s, emergency_contact=%s, email=%s
@@ -285,16 +284,16 @@ def update_info_parent():
 
 def update_info_teacher():
     try:
-        # Create a new window for updating information
+       
         update_window = tk.Toplevel()
         update_window.title("Update Information")
         update_window.geometry("400x400")
 
-        staff_id = username_text  # Assuming the username is the staff ID
+        staff_id = username_text  
         cur.execute("SELECT name, dob, gender, address, emergency_contact, email FROM staff WHERE STAFFID=%s", (staff_id,))
         current_info = cur.fetchone()
 
-        # Create input fields for updating information
+        
         ttk.Label(update_window, text="Name:").pack(pady=5)
         name_entry = ttk.Entry(update_window)
         name_entry.insert(0, current_info[0] if current_info else "")
@@ -374,25 +373,25 @@ def mark_attendance():
     cal.pack(pady=10)
 
     attendance_vars = {}
-    # Display students grouped by class
+    
     for class_name, students in students_by_class.items():
-        # Label for each class
+        
         ttk.Label(attendance_window, text=f"Class: {class_name}", font=("Segoe UI", 14, "bold")).pack(pady=5)
 
         for admno, name in students:
-            var = tk.StringVar(value='P')  # Default to Present
+            var = tk.StringVar(value='P')  
             attendance_vars[admno] = var
             ttk.Label(attendance_window, text=f"{name} ({admno})").pack(anchor='w')
             ttk.Combobox(attendance_window, textvariable=var, values=['P', 'A', 'L'], state='readonly').pack(anchor='w')
 
     def submit_attendance():
-        attendance_date = cal.get_date()  # Get the selected date from the calendar
-        # Convert to 'YYYY-MM-DD' format
+        attendance_date = cal.get_date() 
+        
         month, day, year = map(int, attendance_date.split('/'))
         formatted_date = f"{year}-{month:02d}-{day:02d}"
 
         for admno, status_var in attendance_vars.items():
-            status_value = status_var.get()  # Get the actual string value from the StringVar
+            status_value = status_var.get()  
             cur.execute("INSERT INTO std_attendance (admno, adate, status,subject) VALUES (%s, %s, %s,%s)", 
                         (admno, formatted_date, status_value,subj))
         con.commit()
@@ -447,34 +446,34 @@ def view_attendance_parent():
 
 def manage_users():
     global useredit_window
-    useredit_window = tk.Toplevel()  # Use Toplevel for a new window
+    useredit_window = tk.Toplevel() 
     useredit_window.geometry('600x400')
     useredit_window.title(f"{role.capitalize()} Dashboard")
     
-    # Common header
+    
     header = ttk.Label(useredit_window, text="Manage Users", font=("Segoe UI", 20, "bold"))
     header.pack(pady=10)
 
-    # Create Treeview
+    
     treeview_frame = ttk.Frame(useredit_window)
     treeview_frame.pack(expand=True, fill="both")
 
     treeview = ttk.Treeview(treeview_frame, selectmode="extended", columns=("Username", "Role"), height=15)
     treeview.pack(side="left", expand=True, fill="both")
 
-    # Scrollbar
+    
     tree_scroll = ttk.Scrollbar(treeview_frame, orient="vertical", command=treeview.yview)
     treeview.config(yscrollcommand=tree_scroll.set)
     tree_scroll.pack(side="right", fill="y")
 
-    # Treeview columns
+    
     treeview.heading("#0", text="Name", anchor="center")
     treeview.heading("Username", text="Username", anchor="center")
     treeview.heading("Role", text="Role", anchor="center")
 
     load_users(treeview)
 
-    # Buttons for actions
+    
     add_button = ttk.Button(useredit_window, text="Add User", command=lambda: add_user(treeview))
     add_button.pack(pady=10)
 
@@ -499,8 +498,8 @@ def add_user(treeview):
         nname=name_entry.get()
         nusername = username_entry.get()
         nrole = role_entry.get()
-        npassword = password_entry.get()  # Get password
-        if nusername and nrole and npassword:  # Ensure all fields are filled
+        npassword = password_entry.get()  
+        if nusername and nrole and npassword:  
             cur.execute("INSERT INTO credentials (name,username, role, password) VALUES (%s, %s, %s,%s)", (nname,nusername, nrole, npassword))
             con.commit()
             if nrole=='PARENT':
@@ -509,8 +508,8 @@ def add_user(treeview):
             else:
                 cur.execute(f"INSERT INTO staff (staffid) value('{nusername}');")
                 con.commit()
-            load_users(treeview)  # Refresh the treeview
-            add_window.destroy()  # Close the add user window
+            load_users(treeview)  
+            add_window.destroy()  
     add_window = tk.Toplevel(useredit_window)
     add_window.title("Add User")
 
@@ -555,7 +554,7 @@ def delete_user(treeview):
     if uname:
         cur.execute(f"DELETE FROM credentials WHERE username = '{uname[0]}';")
         con.commit()
-        load_users(treeview)  # Refresh the treeview
+        load_users(treeview)  
 
         
     else:
@@ -579,38 +578,38 @@ def modify_user(treeview):
         new_name = name_entry.get()
         new_username = username_entry.get()
         new_role = role_entry.get()
-        new_password = password_entry.get()  # Get new password
+        new_password = password_entry.get()  
         
-        if new_username and new_role:  # Ensure required fields are filled
+        if new_username and new_role:  
             cur.execute(
                 "UPDATE credentials SET name = %s, username = %s, role = %s, password = %s WHERE name = %s;",
                 (new_name, new_username, new_role, new_password, user_id)
             )
             con.commit()
-            load_users(treeview)  # Refresh the treeview
-            modify_window.destroy()  # Close the modify user window
+            load_users(treeview)  
+            modify_window.destroy()  
 
     modify_window = tk.Toplevel(useredit_window)
     modify_window.title("Modify User")
 
     ttk.Label(modify_window, text="Name:").pack()
     name_entry = ttk.Entry(modify_window)
-    name_entry.insert(0, user_data[0])  # Pre-fill with current name
+    name_entry.insert(0, user_data[0])  
     name_entry.pack()
 
     ttk.Label(modify_window, text="Username:").pack()
     username_entry = ttk.Entry(modify_window)
-    username_entry.insert(0, user_data[1])  # Pre-fill with current username
+    username_entry.insert(0, user_data[1])  
     username_entry.pack()
 
     ttk.Label(modify_window, text="Role:").pack()
     role_entry = ttk.Entry(modify_window)
-    role_entry.insert(0, user_data[2])  # Pre-fill with current role
+    role_entry.insert(0, user_data[2])  
     role_entry.pack()
 
     ttk.Label(modify_window, text="New Password:").pack()
     password_entry = ttk.Entry(modify_window, show="*")
-    password_entry.insert(0, user_data[3])  # Pre-fill with current password
+    password_entry.insert(0, user_data[3])  
     password_entry.pack()
 
     ttk.Button(modify_window, text="Submit", command=submit).pack()
@@ -716,7 +715,7 @@ def register_teacher():
         dob = entry_dob.get()
         date_of_joining = entry_date_of_joining.get()
 
-        # SQL query using f-string to update the STAFF table
+        
         sql = f"""UPDATE STAFF
                   SET NAME='{name}', SUBJECT_TAUGHT='{subject_taught}', 
                       CLASS1='{classes[0]}', CLASS2='{classes[1]}', CLASS3='{classes[2]}',
@@ -730,7 +729,7 @@ def register_teacher():
         messagebox.showinfo("Success", "Teacher Registered Successfully!")
         teacher_window.destroy()
 
-    # Create a new window for teacher registration
+    
     teacher_window = tk.Toplevel(dashboard_window)
     teacher_window.title("Teacher Registration")
     teacher_window.geometry('700x500')
@@ -871,18 +870,18 @@ def show_data():
     display_view.title("Search Records")
    
 
-    # Search Type Selection
+    
     search_type = tk.StringVar(value="student_adm_no")
     ttk.Label(display_view, text="Select Search Type:").grid(row=0, column=0)
     search_options = ["student_adm_no", "student_class", "staff_id", "staff_subject"]
     ttk.OptionMenu(display_view, search_type, search_options[0], *search_options).grid(row=0, column=1)
 
-    # Search Entry
+   
     ttk.Label(display_view, text="Enter Value:").grid(row=1, column=0)
     search_entry = ttk.Entry(display_view)
     search_entry.grid(row=1, column=1)
 
-    # Search Button
+    
     ttk.Button(display_view, text="Search", command=search_records).grid(row=2, columnspan=2)
 
 
@@ -894,18 +893,18 @@ def open_dashboard(role):
     """
     Opens a new window with widgets and functionalities specific to the user role.
     """
-    root.destroy()  # Close the login window
+    root.destroy()  
     global dashboard_window
     dashboard_window = tk.Tk()
     dashboard_window.geometry('700x500')
     dashboard_window.title(f"{role.capitalize()} Dashboard")
-    # Import the tcl file
+    
     dashboard_window.tk.call('source', 'forest-dark.tcl')
 
-    # Set the theme with the theme_use method
+    
     ttk.Style().theme_use('forest-dark')
     
-    # Common header
+    
     header = ttk.Label(dashboard_window, text=f"Welcome, {creds[0]}!", font=("Segoe UI", 20, "bold"))
     header.pack(pady=10)
     cur.execute(f'SELECT PICTURE FROM PROFILE WHERE ID="{username_text}";')
@@ -920,25 +919,24 @@ def open_dashboard(role):
     image = Image.open(io.BytesIO(binary_data))
     image = image.resize((100, 100), Image.LANCZOS)
 
-    # Create a circular mask
+    
     mask = Image.new('L', (100, 100), 0)
     draw = ImageDraw.Draw(mask)
     draw.ellipse((0, 0, 100, 100), fill=255)
 
-    # Apply the mask to the image
+    
     image.putalpha(mask)
 
-    # Convert the image to PhotoImage format
+    
     photo = ImageTk.PhotoImage(image)
 
-    # Create a Label to display the image
+    
     label = tk.Label(dashboard_window, image=photo)
-    label.image = photo  # Keep a reference to avoid garbage collection
-    label.place(x=10, y=10)  # Place the image at (10, 10) on the window
+    label.image = photo  
+    label.place(x=10, y=10)  
 
     
     if role == 'PARENT':
-        # Widgets specific to Parent role
         ttk.Label(dashboard_window, text="Parent Dashboard", font=("Segoe UI", 16, "bold")).pack(pady=10)
         ttk.Button(dashboard_window, text="View Attendance", command=view_attendance_parent).pack(pady=10)
         ttk.Button(dashboard_window, text="Update Contact Information", command=update_info_parent).pack(pady=10)
@@ -965,11 +963,12 @@ def open_dashboard(role):
 
 root = tk.Tk()
 root.geometry('925x500+300+200')
+root.title("Student Management Software")
 
-# Import the tcl file
+
 root.tk.call('source',"forest-dark.tcl")
 
-# Set the theme with the theme_use method
+
 ttk.Style().theme_use('forest-dark')
 img = PhotoImage(file='login.PNG')
 img_label = tk.Label(root, image=img,)
@@ -979,7 +978,7 @@ frame=ttk.Frame(root,width=350,height=350)
 frame.place(x=625,y=60)
 
 
-# Header
+
 header2 = ttk.Label(frame, text="Sign In", anchor=tk.CENTER, font=("Open Sans", 19, "bold"))
 header2.pack(pady=10)
 
